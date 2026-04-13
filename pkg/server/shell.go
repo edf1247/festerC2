@@ -35,11 +35,26 @@ func HandleInput(l Listeners) {
 				continue
 			}
 			l.StartListener(cleanInput[1], cleanInput[2])
-		case "ls":
-			fmt.Printf("ListenerID  Addr\n")
-			for k, v := range l.listeners {
-				fmt.Printf("%d \t  %s\n", k, v.Addr)
+		case "list":
+			if len(cleanInput) < 2 {
+				fmt.Println("Usage: list <l/s>")
+				continue
 			}
+			switch cleanInput[1] {
+			case "l":
+				fmt.Printf("ListenerID  Addr\n")
+				for k, v := range l.listeners {
+					fmt.Printf("%d \t  %s\n", k, v.server.Addr)
+				}
+			case "s":
+				fmt.Printf("SessionID 	RHost 	ListenerID\n")
+				for listenerID, listener := range l.listeners {
+					for sessionID, session := range listener.activeSessions {
+						fmt.Printf("%s \t %s \t %d\n", sessionID, session.rhost, listenerID)
+					}
+				}
+			}
+			
 		case "kill":
 			if len(cleanInput) != 2 {
 				fmt.Println("Usage: kill <listener id>")
@@ -53,11 +68,11 @@ func HandleInput(l Listeners) {
 			}
 			switch cleanInput[1] {
 			case "agent":
-				if len(cleanInput) != 4 {
-					fmt.Println("Usage: build agent <lhost> <lport>")
+				if len(cleanInput) != 5 {
+					fmt.Println("Usage: build agent <lhost> <lport> <platform:linux/win>")
 					continue
 				}
-				CreateAgent(cleanInput[2], cleanInput[3])
+				CreateAgent(cleanInput[2], cleanInput[3], cleanInput[4])
 			}
 		}
 	}
