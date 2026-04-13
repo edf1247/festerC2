@@ -29,9 +29,11 @@ func (l *Listeners) StartListener(lhost string, lport string) {
 		listener := &http.Server{
 			Addr: addr,
 		}
+		
 		l.mu.Lock()
 		l.listeners[listenerID] = listener
 		l.mu.Unlock()
+
 		listener.ListenAndServe()
 	}()
 

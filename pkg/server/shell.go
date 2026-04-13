@@ -31,7 +31,7 @@ func HandleInput(l Listeners) {
 			fmt.Println(commands)
 		case "listen":
 			if len(cleanInput) != 3 {
-				fmt.Println("Usage: listen <listen ip> <listen port>")
+				fmt.Println("Usage: listen <lhost> <lport>")
 				continue
 			}
 			l.StartListener(cleanInput[1], cleanInput[2])
@@ -43,8 +43,22 @@ func HandleInput(l Listeners) {
 		case "kill":
 			if len(cleanInput) != 2 {
 				fmt.Println("Usage: kill <listener id>")
+				continue
 			}
 			l.KillListener(cleanInput[1])
+		case "build":
+			if len(cleanInput) < 2 {
+				fmt.Println("Usage: build <agent/beacon>")
+				continue
+			}
+			switch cleanInput[1] {
+			case "agent":
+				if len(cleanInput) != 4 {
+					fmt.Println("Usage: build agent <lhost> <lport>")
+					continue
+				}
+				CreateAgent(cleanInput[2], cleanInput[3])
+			}
 		}
 	}
 }
