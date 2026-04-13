@@ -38,8 +38,13 @@ func HandleInput(l Listeners) {
 		case "ls":
 			fmt.Printf("ListenerID  Addr\n")
 			for k, v := range l.listeners {
-				fmt.Printf("%d \t  %s\n", k, v.Addr())
+				fmt.Printf("%d \t  %s\n", k, v.Addr)
 			}
+		case "kill":
+			if len(cleanInput) != 2 {
+				fmt.Println("Usage: kill <listener id>")
+			}
+			l.KillListener(cleanInput[1])
 		}
 	}
 }
