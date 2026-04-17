@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"strings"
 )
 
 type Command struct {
-	input string
-	output string
+	input []string
+	output []string
 }
 
 type Session struct {
@@ -41,9 +42,24 @@ func (l *Listener) createSession(w http.ResponseWriter, r *http.Request) {
 
 	rh := r.RemoteAddr
 
-	s := Session{id: sid, q: make([]Command, 0), rhost: rh, listenerID: l.id}
+	s := Session{id: sid, q: []Command{}, rhost: rh, listenerID: l.id}
 	l.activeSessions[sid] = &s
 	fmt.Printf("\nConnection recieved from %s. Session started with id %s. \n", rh, sid)
+}
+
+func (l *Listener) getCommands(w http.ResponseWriter, r *http.Request) {
+	sid := r.PathValue("id")
+	session := l.activeSessions[sid]
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+
+	commands := ""
+	for i := range session.q {
+		commands = commands + "," + strings.Join(session.q[i].input, " ")
+	}
+
+	w.Write([]byte(commands))
 }
 
 func InitListeners() (Listeners) {
@@ -69,6 +85,7 @@ func (l *Listeners) StartListener(lhost string, lport string) {
 		listener := Listener{server: s, activeSessions: make(map[string]*Session), id: listenerID}
 
 		mux.HandleFunc("/createSession", listener.createSession)
+		mux.HandleFunc("/getCommands/{id}", listener.getCommands)
 
 		l.mu.Lock()
 		l.listeners[listenerID] = &listener

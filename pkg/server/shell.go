@@ -82,7 +82,7 @@ func HandleInput(l Listeners) {
 				continue
 			}
 
-			l.Interact(cleanInput[2])
+			l.Interact(cleanInput[1])
 
 		case "help":
 			fmt.Printf("Help:\n")
