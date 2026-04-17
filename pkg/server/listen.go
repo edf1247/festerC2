@@ -17,9 +17,11 @@ type Session struct {
 	id string
 	q []Command
 	rhost string
+	listenerID int
 }
 
 type Listener struct {
+	id 				int
 	mu 				sync.Mutex
 	server 			*http.Server
 	activeSessions	map[string]*Session // map session id -> Session object
@@ -29,9 +31,9 @@ type Listeners struct {
 	mu 		  sync.Mutex
 	listeners map[int]*Listener
 }
- 
+
 func (l *Listener) createSession(w http.ResponseWriter, r *http.Request) {
-	sid := r.PostFormValue("sid")
+	sid := r.PostFormValue("sid") + ":" + strconv.Itoa(l.id)
 	if sid == "" {
 		fmt.Println("Malformed request")
 		return
@@ -39,7 +41,7 @@ func (l *Listener) createSession(w http.ResponseWriter, r *http.Request) {
 
 	rh := r.RemoteAddr
 
-	s := Session{id: sid, q: make([]Command, 0), rhost: rh}
+	s := Session{id: sid, q: make([]Command, 0), rhost: rh, listenerID: l.id}
 	l.activeSessions[sid] = &s
 	fmt.Printf("\nConnection recieved from %s. Session started with id %s. \n", rh, sid)
 }
@@ -57,12 +59,16 @@ func (l *Listeners) StartListener(lhost string, lport string) {
 	addr := lhost + ":" + lport
 
 	go func() {
+		mux := http.NewServeMux()
+		
 		s := &http.Server{
 			Addr: addr,
+			Handler: mux,
 		}
 
-		listener := Listener{server: s, activeSessions: make(map[string]*Session)}
-		http.HandleFunc("/createSession", listener.createSession)
+		listener := Listener{server: s, activeSessions: make(map[string]*Session), id: listenerID}
+
+		mux.HandleFunc("/createSession", listener.createSession)
 
 		l.mu.Lock()
 		l.listeners[listenerID] = &listener

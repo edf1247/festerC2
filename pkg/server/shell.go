@@ -15,6 +15,8 @@ func Splash() {
 
 func HandleInput(l Listeners) {
 	
+	helpMenu := []string{"history", "listen", "list", "kill", "build", "interact"}
+
 	commands := []string{}
 
 	for {
@@ -47,7 +49,7 @@ func HandleInput(l Listeners) {
 					fmt.Printf("%d \t  %s\n", k, v.server.Addr)
 				}
 			case "s":
-				fmt.Printf("SessionID 	RHost 	ListenerID\n")
+				fmt.Printf("SessionID \t \t RHost \t \t ListenerID\n")
 				for listenerID, listener := range l.listeners {
 					for sessionID, session := range listener.activeSessions {
 						fmt.Printf("%s \t %s \t %d\n", sessionID, session.rhost, listenerID)
@@ -69,10 +71,23 @@ func HandleInput(l Listeners) {
 			switch cleanInput[1] {
 			case "agent":
 				if len(cleanInput) != 5 {
-					fmt.Println("Usage: build agent <lhost> <lport> <platform:linux/win>")
+					fmt.Println("Usage: build agent <rhost> <rport> <platform:linux/win>")
 					continue
 				}
 				CreateAgent(cleanInput[2], cleanInput[3], cleanInput[4])
+			}
+		case "interact":
+			if len(cleanInput) < 2 {
+				fmt.Println("Usage: interact <session id>")
+				continue
+			}
+
+			l.Interact(cleanInput[2])
+
+		case "help":
+			fmt.Printf("Help:\n")
+			for command := range helpMenu {
+				fmt.Printf("\t %s \n", helpMenu[command])
 			}
 		}
 	}
