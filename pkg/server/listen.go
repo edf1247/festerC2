@@ -1,73 +1,72 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"net/http"
-	"fmt"
 	"strconv"
 	"sync"
-	"strings"
 )
 
 type Command struct {
-	input []string
-	output []string
+	input  string
+	output string
 }
 
 type Session struct {
-	id string
-	q []Command
-	rhost string
-	listenerID int
+	id         		  string
+	commChan   		  chan Command
+	respChan   		  chan string
+	rhost      		  string
+	listenerID 		  int
+	commQueue  		  []Command
+	commResponseQueue []Command
 }
 
 type Listener struct {
-	id 				int
-	mu 				sync.Mutex
-	server 			*http.Server
-	activeSessions	map[string]*Session // map session id -> Session object
+	id             int
+	mu             sync.Mutex
+	server         *http.Server
+	activeSessions map[string]*Session // map session id -> Session object
 }
 
 type Listeners struct {
-	mu 		  sync.Mutex
+	mu        sync.Mutex
 	listeners map[int]*Listener
 }
 
 func (l *Listener) createSession(w http.ResponseWriter, r *http.Request) {
 	sid := r.PostFormValue("sid") + ":" + strconv.Itoa(l.id)
+	sessionType := r.PostFormValue("type")
 	if sid == "" {
 		fmt.Println("Malformed request")
 		return
 	}
 
+	if sessionType == "" {
+		fmt.Println("Malformed request")
+	}
+
 	rh := r.RemoteAddr
 
-	s := Session{id: sid, q: []Command{}, rhost: rh, listenerID: l.id}
+	s := Session{id: sid, rhost: rh, listenerID: l.id}
+
+	if sessionType == "1" {
+		s.commChan = make(chan Command)
+	} else {
+		s.commQueue = []Command{}
+	}
+
 	l.activeSessions[sid] = &s
 	fmt.Printf("\nConnection recieved from %s. Session started with id %s. \n", rh, sid)
 }
 
-func (l *Listener) getCommands(w http.ResponseWriter, r *http.Request) {
-	sid := r.PathValue("id")
-	session := l.activeSessions[sid]
-
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusOK)
-
-	commands := ""
-	for i := range session.q {
-		commands = commands + "," + strings.Join(session.q[i].input, " ")
-	}
-
-	w.Write([]byte(commands))
-}
-
-func InitListeners() (Listeners) {
+func InitListeners() Listeners {
 	l := Listeners{
 		listeners: make(map[int]*Listener),
 	}
 	return l
-}	
+}
 
 func (l *Listeners) StartListener(lhost string, lport string) {
 	listenerID := len(l.listeners)
@@ -76,16 +75,21 @@ func (l *Listeners) StartListener(lhost string, lport string) {
 
 	go func() {
 		mux := http.NewServeMux()
-		
+
 		s := &http.Server{
-			Addr: addr,
+			Addr:    addr,
 			Handler: mux,
 		}
 
 		listener := Listener{server: s, activeSessions: make(map[string]*Session), id: listenerID}
 
 		mux.HandleFunc("/createSession", listener.createSession)
-		mux.HandleFunc("/getCommands/{id}", listener.getCommands)
+
+		mux.HandleFunc("/beacon/getCommands/{id}", listener.GetCommands)
+		mux.HandleFunc("/beacon/response/{id}", listener.BeaconResponse)
+
+		mux.HandleFunc("/agent/input/{id}", listener.AgentSSE)
+		mux.HandleFunc("/agent/response/{id}", listener.AgentResponse)
 
 		l.mu.Lock()
 		l.listeners[listenerID] = &listener
