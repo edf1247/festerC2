@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
 	"github.com/common-nighthawk/go-figure"
 )
 
@@ -16,7 +15,7 @@ func Splash() {
 
 func HandleInput(l Listeners) {
 
-	helpMenu := []string{"history", "listen", "list", "kill", "build", "interact"}
+	helpMenu := []string{"history", "listen", "list", "kill", "build", "interact", "exit"}
 
 	commands := []string{}
 
@@ -96,6 +95,8 @@ func HandleInput(l Listeners) {
 			for command := range helpMenu {
 				fmt.Printf("\t %s \n", helpMenu[command])
 			}
+		case "exit":
+			os.Exit(0)
 		}
 	}
 }
