@@ -6,10 +6,10 @@ import (
 	"strings"
 	"bufio"
 	"os"
-	"os/signal"
 )
 
 func (l *Listeners) Interact(sid string) {
+	commands := []string{"quit", "exit", "shell", "queue"}
 
 	splitString := strings.Split(sid, ":")
 
@@ -32,61 +32,29 @@ func (l *Listeners) Interact(sid string) {
 	}
 
 	prompt := splitString[0]
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-	defer signal.Stop(sigChan)
-
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		for len(session.commResponseQueue) > 0 {
-			curr := session.commResponseQueue[0]
-			session.commResponseQueue = session.commResponseQueue[1:]
-			fmt.Printf("Input: %s | Output: %s\n", curr.input, curr.output)
-		}
-
 		fmt.Printf("%s> ", prompt)
 
-		inputChan := make(chan string, 1)
+		input, _ := reader.ReadString('\n')
+		input = strings.TrimSpace(input)
+		cleanInput := strings.Split(input, " ")
 
-		go func() {
-			input, _ := reader.ReadString('\n')
-			inputChan <- strings.TrimSpace(input)
-		}()
-		
-		select {
-		case <-sigChan:
-			fmt.Println("Quitting Session")
+		switch cleanInput[0] {
+		case "quit":
 			return
-		case input := <-inputChan:
-			cleanInput := strings.Split(input, " ")
-
-			if cleanInput[0] == "quit" {
-				return
+		case "exit":
+			return
+		case "shell":
+			fmt.Println("Dropping into shell...")
+			session.Shell()
+		case "queue":
+			session.PrintQueue()
+		case "help":
+			for k := range commands {
+				fmt.Println(commands[k])
 			}
-			
-			c := Command{input: input}
-			if session.commChan != nil {
-				session.respChan = make(chan string, 1)
-				select {
-				case <-sigChan:
-					return
-				case session.commChan <- c:
-					//sent
-				}
-				
-				select {
-				case <-sigChan:
-					return
-				case resp := <-session.respChan:
-					fmt.Printf("%s> %s", prompt, resp)
-				}
-			} else {
-				if c.input != " " {
-					session.commQueue = append(session.commQueue, c)
-					fmt.Printf("Command added to queue: [%v]\n", session.commQueue)
-				}
-			}	
 		}
 	}
 }
